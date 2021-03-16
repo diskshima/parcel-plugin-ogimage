@@ -4,6 +4,7 @@ const url = require('url');
 const ora = require('ora');
 const chalk = require('chalk');
 const prettyMs = require('pretty-ms');
+const glob = require('glob');
 
 const getMetaTag = (html, property) => {
 	const regex = new RegExp(`<meta[^>]*property=["|']${property}["|'][^>]*>`, 'i');
@@ -31,40 +32,50 @@ module.exports = bundler => {
 	bundler.on('buildEnd', async () => {
 		console.log('');
 
-		const spinner = ora(chalk.grey('Fixing og:image link')).start();
-		const start = Date.now();
+		const htmlPattern = path.join(bundler.options.outDir, '*.html');
 
-		const htmlPath = path.join(bundler.options.outDir, bundler.options.outFile);
-		const html = fs.readFileSync(htmlPath).toString();
-		let hasErrors = false;
+		glob(htmlPattern, (err, htmlFiles) => {
+			if (err) {
+				chalk.red(`Failed with ${err}`);
+				return;
+			}
 
-		try {
-			const ogImageTag = getMetaTag(html, 'og:image');
-			const ogImageContent = getMetaTagContent(ogImageTag);
+			htmlFiles.forEach((htmlPath) => {
+				const spinner = ora(chalk.grey(`Fixing og:image link for ${htmlPath}`)).start();
+				const start = Date.now();
 
-			const ogUrlTag = getMetaTag(html, 'og:url');
-			const ogUrlContent = getMetaTagContent(ogUrlTag);
+				const html = fs.readFileSync(htmlPath).toString();
+				let hasErrors = false;
 
-			const absoluteOgImageUrl = url.resolve(ogUrlContent, ogImageContent);
-			const ogImageTagAbsoluteUrl = ogImageTag.replace(ogImageContent, absoluteOgImageUrl);
-			const patchedHtml = html.replace(ogImageTag, ogImageTagAbsoluteUrl);
+				try {
+					const ogImageTag = getMetaTag(html, 'og:image');
+					const ogImageContent = getMetaTagContent(ogImageTag);
 
-			fs.writeFileSync(htmlPath, patchedHtml);
-		} catch (error) {
-			spinner.fail(error.message);
+					const ogUrlTag = getMetaTag(html, 'og:url');
+					const ogUrlContent = getMetaTagContent(ogUrlTag);
 
-			hasErrors = true;
-		}
+					const absoluteOgImageUrl = url.resolve(ogUrlContent, ogImageContent);
+					const ogImageTagAbsoluteUrl = ogImageTag.replace(ogImageContent, absoluteOgImageUrl);
+					const patchedHtml = html.replace(ogImageTag, ogImageTagAbsoluteUrl);
 
-		const end = Date.now();
-		const symbol = hasErrors ? chalk.red('✖') : '✨ ';
-		const text = hasErrors ?
-			chalk.red('Failed to fix og:image link.') :
-			chalk.green(`Fixed og:image link in ${prettyMs(end - start)}.`);
+					fs.writeFileSync(htmlPath, patchedHtml);
+				} catch (error) {
+					spinner.fail(error.message);
 
-		spinner.stopAndPersist({
-			symbol,
-			text
+					hasErrors = true;
+				}
+
+				const end = Date.now();
+				const symbol = hasErrors ? chalk.red('✖') : '✨ ';
+				const text = hasErrors ?
+					chalk.red(`Failed to fix og:image link for ${htmlPath}.`) :
+					chalk.green(`Fixed og:image link for ${htmlPath} in ${prettyMs(end - start)}.`);
+
+				spinner.stopAndPersist({
+					symbol,
+					text
+				});
+			});
 		});
 	});
 };
