@@ -11,7 +11,7 @@ const getMetaTag = (html, property) => {
 	const results = regex.exec(html);
 
 	if (!results) {
-		throw new Error(`Missing ${property}`);
+		return null;
 	}
 
 	return results[0];
@@ -49,6 +49,12 @@ module.exports = bundler => {
 
 				try {
 					const ogImageTag = getMetaTag(html, 'og:image');
+					if (!ogImageTag) {
+						spinner.stopAndPersist({
+							text: chalk.gray(`Missing og:image for ${htmlPath}. Skipping...`),
+						});
+						return;
+					}
 					const ogImageContent = getMetaTagContent(ogImageTag);
 
 					const ogUrlTag = getMetaTag(html, 'og:url');
