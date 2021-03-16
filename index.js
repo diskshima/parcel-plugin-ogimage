@@ -29,9 +29,6 @@ const getMetaTagContent = metaTagHtml => {
 
 module.exports = bundler => {
 	bundler.on('buildEnd', async () => {
-		if (process.env.NODE_ENV !== 'production') {
-			return;
-		}
 		console.log('');
 
 		const spinner = ora(chalk.grey('Fixing og:image link')).start();
