@@ -34,7 +34,7 @@ module.exports = bundler => {
 		const spinner = ora(chalk.grey('Fixing og:image link')).start();
 		const start = Date.now();
 
-		const htmlPath = path.join(bundler.options.outDir, 'index.html');
+		const htmlPath = path.join(bundler.options.outDir, bundler.options.outFile);
 		const html = fs.readFileSync(htmlPath).toString();
 		let hasErrors = false;
 
